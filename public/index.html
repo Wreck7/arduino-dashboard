@@ -1,38 +1,420 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Water Monitoring System</title>
   <script src="/socket.io/socket.io.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+      color: #fff;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 40px;
+      animation: fadeInDown 0.8s ease-out;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      font-weight: 700;
+      text-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+      margin-bottom: 10px;
+    }
+
+    .subtitle {
+      font-size: 1.1rem;
+      opacity: 0.9;
+      font-weight: 300;
+    }
+
+    .dashboard {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 25px;
+      margin-bottom: 40px;
+    }
+
+    .sensor-card {
+      background: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      padding: 30px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      transition: all 0.3s ease;
+      animation: fadeInUp 0.8s ease-out;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .sensor-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%);
+      transform: scaleX(0);
+      transition: transform 0.3s ease;
+    }
+
+    .sensor-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+    }
+
+    .sensor-card:hover::before {
+      transform: scaleX(1);
+    }
+
+    .sensor-icon {
+      font-size: 3rem;
+      margin-bottom: 15px;
+      display: block;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    .sensor-label {
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      opacity: 0.8;
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+
+    .sensor-value {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-bottom: 5px;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    .sensor-unit {
+      font-size: 1rem;
+      opacity: 0.7;
+      font-weight: 400;
+    }
+
+    .controls-section {
+      background: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      padding: 35px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      animation: fadeInUp 1s ease-out;
+    }
+
+    .controls-title {
+      font-size: 1.8rem;
+      font-weight: 600;
+      margin-bottom: 30px;
+      text-align: center;
+    }
+
+    .controls-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+    }
+
+    .control-item {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 15px;
+      padding: 25px;
+      text-align: center;
+      transition: all 0.3s ease;
+      border: 2px solid transparent;
+    }
+
+    .control-item:hover {
+      background: rgba(255, 255, 255, 0.15);
+      transform: scale(1.05);
+    }
+
+    .control-item.active {
+      border-color: #4ade80;
+      background: rgba(74, 222, 128, 0.2);
+    }
+
+    .control-icon {
+      font-size: 2.5rem;
+      margin-bottom: 15px;
+      display: block;
+    }
+
+    .control-label {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .control-status {
+      font-size: 1.3rem;
+      font-weight: 700;
+      padding: 8px 20px;
+      border-radius: 25px;
+      display: inline-block;
+      transition: all 0.3s ease;
+    }
+
+    .status-on {
+      background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
+      animation: glow 2s ease-in-out infinite;
+    }
+
+    .status-off {
+      background: rgba(255, 255, 255, 0.2);
+      opacity: 0.6;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 50px;
+      font-size: 1.2rem;
+      opacity: 0.8;
+    }
+
+    .loading::after {
+      content: '...';
+      animation: dots 1.5s steps(4, end) infinite;
+    }
+
+    @keyframes fadeInDown {
+      from {
+        opacity: 0;
+        transform: translateY(-30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        transform: scale(1);
+      }
+      50% {
+        transform: scale(1.1);
+      }
+    }
+
+    @keyframes glow {
+      0%, 100% {
+        box-shadow: 0 0 10px rgba(74, 222, 128, 0.5);
+      }
+      50% {
+        box-shadow: 0 0 20px rgba(74, 222, 128, 0.8);
+      }
+    }
+
+    @keyframes dots {
+      0%, 20% {
+        content: '.';
+      }
+      40% {
+        content: '..';
+      }
+      60%, 100% {
+        content: '...';
+      }
+    }
+
+    @media (max-width: 768px) {
+      h1 {
+        font-size: 2rem;
+      }
+
+      .sensor-value {
+        font-size: 2rem;
+      }
+
+      .dashboard {
+        grid-template-columns: 1fr;
+      }
+
+      .controls-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Ripple effect on cards */
+    .sensor-card::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 0;
+      height: 0;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.3);
+      transform: translate(-50%, -50%);
+      transition: width 0.6s, height 0.6s;
+    }
+
+    .sensor-card:active::after {
+      width: 300px;
+      height: 300px;
+    }
+  </style>
 </head>
 <body>
-  <h1>🌊 Water Monitoring Dashboard</h1>
+  <div class="container">
+    <header>
+      <h1>🌊 Water Monitoring System</h1>
+      <p class="subtitle">Real-time aquatic environment tracking</p>
+    </header>
 
-  <h2>Temperature: <span id="temp">--</span> °C</h2>
-  <h2>pH: <span id="ph">--</span></h2>
-  <h2>TDS: <span id="tds">--</span> ppm</h2>
-  <h2>Dissolved Oxygen: <span id="do">--</span> mg/L</h2>
+    <div class="dashboard">
+      <div class="sensor-card">
+        <span class="sensor-icon">🌡️</span>
+        <div class="sensor-label">Temperature</div>
+        <div class="sensor-value">
+          <span id="temp">--</span>
+          <span class="sensor-unit">°C</span>
+        </div>
+      </div>
 
-  <h3>Heater: <span id="heater">--</span></h3>
-  <h3>Pump: <span id="pump">--</span></h3>
-  <h3>Aerator: <span id="aerator">--</span></h3>
+      <div class="sensor-card">
+        <span class="sensor-icon">⚗️</span>
+        <div class="sensor-label">pH Level</div>
+        <div class="sensor-value">
+          <span id="ph">--</span>
+        </div>
+      </div>
+
+      <div class="sensor-card">
+        <span class="sensor-icon">💧</span>
+        <div class="sensor-label">Total Dissolved Solids</div>
+        <div class="sensor-value">
+          <span id="tds">--</span>
+          <span class="sensor-unit">ppm</span>
+        </div>
+      </div>
+
+      <div class="sensor-card">
+        <span class="sensor-icon">🫧</span>
+        <div class="sensor-label">Dissolved Oxygen</div>
+        <div class="sensor-value">
+          <span id="do">--</span>
+          <span class="sensor-unit">mg/L</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="controls-section">
+      <h2 class="controls-title">System Controls</h2>
+      <div class="controls-grid">
+        <div class="control-item" id="heater-control">
+          <span class="control-icon">🔥</span>
+          <div class="control-label">Heater</div>
+          <div class="control-status status-off" id="heater">
+            --
+          </div>
+        </div>
+
+        <div class="control-item" id="pump-control">
+          <span class="control-icon">🚰</span>
+          <div class="control-label">Pump</div>
+          <div class="control-status status-off" id="pump">
+            --
+          </div>
+        </div>
+
+        <div class="control-item" id="aerator-control">
+          <span class="control-icon">🌬️</span>
+          <div class="control-label">Aerator</div>
+          <div class="control-status status-off" id="aerator">
+            --
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <script>
     const socket = io();
 
     socket.on("sensorData", (data) => {
-      document.getElementById("temp").innerText = data.temperature.toFixed(2);
-      document.getElementById("ph").innerText = data.ph.toFixed(2);
-      document.getElementById("tds").innerText = data.tds.toFixed(0);
-      document.getElementById("do").innerText = data.dissolved_oxygen.toFixed(2);
+      // Update sensor values with smooth transitions
+      updateValue("temp", data.temperature.toFixed(2));
+      updateValue("ph", data.ph.toFixed(2));
+      updateValue("tds", data.tds.toFixed(0));
+      updateValue("do", data.dissolved_oxygen.toFixed(2));
 
-      document.getElementById("heater").innerText =
-        data.heater_status ? "ON 🔥" : "OFF";
+      // Update control statuses
+      updateControl("heater", data.heater_status);
+      updateControl("pump", data.pump_status);
+      updateControl("aerator", data.aerator_status);
+    });
 
-      document.getElementById("pump").innerText =
-        data.pump_status ? "ON 🚰" : "OFF";
+    function updateValue(id, value) {
+      const element = document.getElementById(id);
+      if (element.innerText !== value) {
+        element.style.transform = "scale(1.2)";
+        element.innerText = value;
+        setTimeout(() => {
+          element.style.transform = "scale(1)";
+        }, 200);
+      }
+      element.style.transition = "transform 0.2s ease";
+    }
 
-      document.getElementById("aerator").innerText =
-        data.aerator_status ? "ON 🌬" : "OFF";
+    function updateControl(name, status) {
+      const statusElement = document.getElementById(name);
+      const controlElement = document.getElementById(`${name}-control`);
+      
+      if (status) {
+        statusElement.innerText = "ON";
+        statusElement.className = "control-status status-on";
+        controlElement.classList.add("active");
+      } else {
+        statusElement.innerText = "OFF";
+        statusElement.className = "control-status status-off";
+        controlElement.classList.remove("active");
+      }
+    }
+
+    // Add connection status indication
+    socket.on("connect", () => {
+      console.log("Connected to server");
+    });
+
+    socket.on("disconnect", () => {
+      console.log("Disconnected from server");
     });
   </script>
 </body>
