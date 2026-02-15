@@ -10,7 +10,7 @@ const io = new Server(server);
 
 // ⚠️ CHANGE THIS to your actual port
 const port = new SerialPort({
-  path: "COM10",  // example Windows
+  path: "COM6",  // example Windows
   baudRate: 9600,
 });
 
