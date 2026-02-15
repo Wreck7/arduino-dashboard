@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Water Monitoring System</title>
+  <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+  <h1>🌊 Water Monitoring Dashboard</h1>
+
+  <h2>Temperature: <span id="temp">--</span> °C</h2>
+  <h2>pH: <span id="ph">--</span></h2>
+  <h2>TDS: <span id="tds">--</span> ppm</h2>
+  <h2>Dissolved Oxygen: <span id="do">--</span> mg/L</h2>
+
+  <h3>Heater: <span id="heater">--</span></h3>
+  <h3>Pump: <span id="pump">--</span></h3>
+  <h3>Aerator: <span id="aerator">--</span></h3>
+
+  <script>
+    const socket = io();
+
+    socket.on("sensorData", (data) => {
+      document.getElementById("temp").innerText = data.temperature.toFixed(2);
+      document.getElementById("ph").innerText = data.ph.toFixed(2);
+      document.getElementById("tds").innerText = data.tds.toFixed(0);
+      document.getElementById("do").innerText = data.dissolved_oxygen.toFixed(2);
+
+      document.getElementById("heater").innerText =
+        data.heater_status ? "ON 🔥" : "OFF";
+
+      document.getElementById("pump").innerText =
+        data.pump_status ? "ON 🚰" : "OFF";
+
+      document.getElementById("aerator").innerText =
+        data.aerator_status ? "ON 🌬" : "OFF";
+    });
+  </script>
+</body>
+</html>
